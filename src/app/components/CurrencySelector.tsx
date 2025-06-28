@@ -1,4 +1,4 @@
-import { Currency, currencies } from '../utils/currencies';
+import { currencies } from '../utils/currencies';
 
 interface CurrencySelectorProps {
   selectedCurrency: string;

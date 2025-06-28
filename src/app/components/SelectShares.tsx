@@ -23,24 +23,21 @@ export default function SelectShares({
 }: SelectSharesProps) {
   const [editingQuantity, setEditingQuantity] = useState<{[key: string]: boolean}>({});
 
-  const handleAddPerson = (personId: number, itemId: number, itemQuantity: number, equalSplit: boolean) => {
+  const handleAddPerson = (personId: number, itemId: number, equalSplit: boolean) => {
     const currentShares = shares[personId] || [];
     const existingShare = currentShares.find(s => s.itemId === itemId);
     
     if (existingShare?.share) {
-      // Person is already sharing, remove them
       updateShare(personId, itemId, false);
       return;
     }
 
-    // Check if any existing sharers have custom quantities (not equal share)
     const sharingPeople = people.filter(person => {
       const personShares = shares[person.id] || [];
       const itemShare = personShares.find(s => s.itemId === itemId);
       return itemShare?.share || false;
     });
 
-    // Check if any existing sharers have quantities > 1 (custom quantities)
     const hasCustomQuantities = sharingPeople.some(person => {
       const personShares = shares[person.id] || [];
       const itemShare = personShares.find(s => s.itemId === itemId);
@@ -48,18 +45,15 @@ export default function SelectShares({
     });
 
     if (equalSplit) {
-      // Force equal split - add person with equal share
       updateShare(personId, itemId, true, 1);
     } else if (hasCustomQuantities) {
-      // If there are custom quantities, add new person with quantity input
       setEditingQuantity(prev => ({ ...prev, [`${itemId}-${personId}`]: true }));
     } else {
-      // All equal shares (quantity 1 or undefined), add the person with quantity 1
       updateShare(personId, itemId, true, 1);
     }
   };
 
-  const handleQuantityChange = (personId: number, itemId: number, newQuantity: number, itemQuantity: number) => {
+  const handleQuantityChange = (personId: number, itemId: number, newQuantity: number) => {
     if (newQuantity > 0) {
       updateShare(personId, itemId, true, newQuantity);
       setEditingQuantity(prev => {
@@ -79,35 +73,6 @@ export default function SelectShares({
       }
       return total;
     }, 0);
-  };
-
-  const hasQuantityOverflow = (itemId: number, itemQuantity: number, equalSplit: boolean) => {
-    if (equalSplit) {
-      // For equal split items, no overflow (multiple people can share equally)
-      return false;
-    }
-
-    const sharingPeople = people.filter(person => {
-      const personShares = shares[person.id] || [];
-      const itemShare = personShares.find(s => s.itemId === itemId);
-      return itemShare?.share || false;
-    });
-
-    // Check if any people have custom quantities (not equal share)
-    const hasCustomQuantities = sharingPeople.some(person => {
-      const personShares = shares[person.id] || [];
-      const itemShare = personShares.find(s => s.itemId === itemId);
-      // Custom quantity means they have a quantity > 1
-      return itemShare?.quantity && itemShare.quantity > 1;
-    });
-
-    if (hasCustomQuantities) {
-      // Only check overflow for custom quantities
-      return getTotalAllocatedQuantity(itemId) > itemQuantity;
-    } else {
-      // For equal shares, no overflow (multiple people can share equally)
-      return false;
-    }
   };
 
   return (
@@ -159,7 +124,7 @@ export default function SelectShares({
                         <span
                           key={person.id}
                           className="px-3 py-1 rounded-full text-sm font-medium bg-gray-200 text-gray-500 transition-colors cursor-pointer hover:bg-gray-300"
-                          onClick={() => handleAddPerson(person.id, item.id, itemQuantity, item.equalSplit || false)}
+                          onClick={() => handleAddPerson(person.id, item.id, item.equalSplit || false)}
                         >
                           {person.name}
                         </span>
@@ -175,7 +140,7 @@ export default function SelectShares({
                               const personShares = shares[person.id] || [];
                               const itemShare = personShares.find(s => s.itemId === item.id);
                               if (!itemShare?.share) {
-                                handleAddPerson(person.id, item.id, itemQuantity, item.equalSplit || false);
+                                handleAddPerson(person.id, item.id, item.equalSplit || false);
                               }
                             });
                           }}
@@ -188,7 +153,6 @@ export default function SelectShares({
                 </div>
               </div>
               
-              {/* Active chips for sharing people */}
               {sharingPeople.length > 0 && (
                 <div className="border-t pt-3">
                   <div className="flex items-center justify-between mb-2">
@@ -229,7 +193,7 @@ export default function SelectShares({
                                     onKeyDown={(e) => {
                                       if (e.key === 'Enter') {
                                         const newQuantity = parseInt((e.target as HTMLInputElement).value) || 1;
-                                        handleQuantityChange(person.id, item.id, newQuantity, itemQuantity);
+                                        handleQuantityChange(person.id, item.id, newQuantity);
                                       } else if (e.key === 'Escape') {
                                         setEditingQuantity(prev => {
                                           const newState = { ...prev };
@@ -240,7 +204,7 @@ export default function SelectShares({
                                     }}
                                     onBlur={(e) => {
                                       const newQuantity = parseInt(e.target.value) || 1;
-                                      handleQuantityChange(person.id, item.id, newQuantity, itemQuantity);
+                                      handleQuantityChange(person.id, item.id, newQuantity);
                                     }}
                                     autoFocus
                                   />
@@ -248,10 +212,10 @@ export default function SelectShares({
                                 </div>
                               ) : (
                                 <button
+                                  className="px-2 py-1 rounded-full text-xs bg-gray-200 text-gray-700 hover:bg-gray-300"
                                   onClick={() => setEditingQuantity(prev => ({ ...prev, [key]: true }))}
-                                  className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
                                 >
-                                  {quantity}
+                                  Qty: {quantity}
                                 </button>
                               )
                             )}
@@ -259,16 +223,12 @@ export default function SelectShares({
                         );
                       })}
                     </div>
-                    <span
-                      className="ml-4 px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 border border-red-200 cursor-pointer hover:bg-red-200 transition-colors"
-                      onClick={() => {
-                        sharingPeople.forEach(person => {
-                          updateShare(person.id, item.id, false);
-                        });
-                      }}
-                    >
-                      Remove All
-                    </span>
+                    
+                    {sharingPeople.length > 1 && item.equalSplit && (
+                      <div className="text-sm text-gray-500">
+                        {formatCurrency(parseFloat(item.price) / sharingPeople.length, locale, currency)} each
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

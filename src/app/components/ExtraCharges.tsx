@@ -5,14 +5,13 @@ import { MdClose } from 'react-icons/md';
 
 interface ExtraChargeProps {
   charge: ExtraCharge;
-  subtotal: number;
   onUpdate: (id: number, field: keyof ExtraCharge, value: string | 'amount' | 'percentage') => void;
   onRemove: (id: number) => void;
   locale?: string;
   currency?: string;
 }
 
-export default function ExtraCharges({ charge, subtotal, onUpdate, onRemove, locale = 'en-US', currency = 'USD' }: ExtraChargeProps) {
+export default function ExtraCharges({ charge, onUpdate, onRemove, locale = 'en-US', currency = 'USD' }: ExtraChargeProps) {
   return (
     <div className="flex items-center gap-4 mb-3 flex-wrap">
       <div className="flex-grow">

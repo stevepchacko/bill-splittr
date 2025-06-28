@@ -2,13 +2,11 @@
 import { useState, useEffect, useRef } from 'react';
 import BillItems from './components/BillItems';
 import ExtraCharges from './components/ExtraCharges';
-import Results from './components/Results';
 import BillSummary from './components/BillSummary';
 import CurrencySelector from './components/CurrencySelector';
 import SelectShares from './components/SelectShares';
 import { BillItem, ExtraCharge, Person, Shares } from './types';
 import { getBrowserCurrency, formatCurrency } from './utils/currency';
-import { currencies } from './utils/currencies';
 import { MdClose, MdAdd } from 'react-icons/md';
 import React from 'react';
 import Input from './components/Input';
@@ -128,7 +126,7 @@ export default function BillSplitter() {
       }
       return charge;
     }));
-  }, [subtotal]);
+  }, [subtotal, extraCharges]);
 
   const removeExtraCharge = (id: number) => {
     setExtraCharges(extraCharges.filter(charge => charge.id !== id));
@@ -392,7 +390,6 @@ export default function BillSplitter() {
                 <ExtraCharges
                   key={charge.id}
                   charge={charge}
-                  subtotal={subtotal}
                   onUpdate={updateExtraCharge}
                   onRemove={removeExtraCharge}
                   locale={currencyInfo.locale}
@@ -565,7 +562,7 @@ export default function BillSplitter() {
               <span className="font-medium text-gray-500 text-sm text-right">Amount</span>
               
               {/* Data Rows */}
-              {people.map((person, index) => {
+              {people.map((person) => {
                 const personTotal = calculatePersonTotals()[person.id];
                 const percentage = (personTotal / total * 100).toFixed(2);
                 
