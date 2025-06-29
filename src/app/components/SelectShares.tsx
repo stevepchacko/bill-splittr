@@ -88,6 +88,11 @@ export default function SelectShares({
             const itemShare = personShares.find(s => s.itemId === item.id);
             return itemShare?.share || false;
           });
+          const unselectedPeople = people.filter(person => {
+            const personShares = shares[person.id] || [];
+            const itemShare = personShares.find(s => s.itemId === item.id);
+            return !itemShare?.share;
+          });
           
           const allocatedQuantity = getTotalAllocatedQuantity(item.id);
           const quantityMismatch = allocatedQuantity !== itemQuantity;
@@ -114,49 +119,48 @@ export default function SelectShares({
                 </button>
               </div>
                   
-              <div className="flex justify-between items-center mt-2">
-                <div className="flex flex-wrap gap-2 flex-1">
-                  {people.filter(person => {
-                    const personShares = shares[person.id] || [];
-                    const itemShare = personShares.find(s => s.itemId === item.id);
-                    return !itemShare?.share; 
-                  }).map(person => (
-                    <span
-                      key={person.id}
-                      className="px-3 py-1 rounded-full text-sm font-medium bg-gray-200 text-gray-500 transition-colors cursor-pointer hover:bg-gray-300"
-                      onClick={() => handleAddPerson(person.id, item.id, item.equalSplit || false)}
-                    >
-                      {person.name}
-                    </span>
-                  ))}
+              {unselectedPeople.length > 0 &&
+                <div className="mt-3">
+                  <p className="text-sm text-gray-500 mb-2">
+                    Click to add contributors:
+                  </p>
+                  <div className="flex justify-between items-center">
+                    <div className="flex flex-wrap gap-2 flex-1">
+                      {unselectedPeople.map(person => (
+                        <span
+                          key={person.id}
+                          className="px-3 py-1 rounded-full text-sm font-medium bg-gray-200 text-gray-500 transition-colors cursor-pointer hover:bg-gray-300"
+                          onClick={() => handleAddPerson(person.id, item.id, item.equalSplit || false)}
+                        >
+                          {person.name}
+                        </span>
+                      ))}
+                    </div>
+                    
+                    <div className="ml-4 flex-shrink-0">
+                      {unselectedPeople.length > 0 && (
+                        <button
+                          className="px-3 py-1 rounded-lg text-sm font-medium bg-blue-200 text-blue-800 cursor-pointer hover:bg-blue-300 transition-colors leading-tight text-center"
+                          onClick={() => {
+                            unselectedPeople.forEach(person => {
+                              handleAddPerson(person.id, item.id, item.equalSplit || false);
+                            });
+                          }}
+                        >
+                          <span>Add</span>
+                          <span className="sm:hidden"><br /></span>
+                          <span>&nbsp;All</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                
-                <div className="ml-4 flex-shrink-0">
-                  {sharingPeople.length < people.length && (
-                    <button
-                      className="px-3 py-1 rounded-lg text-sm font-medium bg-blue-200 text-blue-800 cursor-pointer hover:bg-blue-300 transition-colors leading-tight text-center"
-                      onClick={() => {
-                        people.forEach(person => {
-                          const personShares = shares[person.id] || [];
-                          const itemShare = personShares.find(s => s.itemId === item.id);
-                          if (!itemShare?.share) {
-                            handleAddPerson(person.id, item.id, item.equalSplit || false);
-                          }
-                        });
-                      }}
-                    >
-                      Add
-                      <br />
-                      All
-                    </button>
-                  )}
-                </div>
-              </div>
+              }
               
               {sharingPeople.length > 0 && (
                 <div className="border-t pt-3 mt-3">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm text-gray-600">Sharing this item:</p>
+                    <p className="text-sm text-gray-600">Contributors: (click to remove):</p>
                     {!(item.equalSplit) && (
                       <p className={`text-sm font-medium ${quantityMismatch ? 'text-red-500' : 'text-green-500'}`}>
                         Allocated: {allocatedQuantity} / {itemQuantity}
@@ -233,9 +237,9 @@ export default function SelectShares({
                             });
                           }}
                         >
-                          Remove
-                          <br />
-                          All
+                          <span>Remove</span>
+                          <span className="sm:hidden"><br /></span>
+                          <span>&nbsp;All</span>
                         </button>
                       )}
                     </div>
