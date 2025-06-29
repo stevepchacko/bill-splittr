@@ -24,29 +24,30 @@ export default function BillSummary({
   );
 
   return (
-    <div className="mt-6 border-t pt-4">
+    <div className="mt-6 border-t pt-4 mb-6">
       <h3 className="text-lg font-semibold mb-3">Bill Summary</h3>
-      <div className="grid grid-cols-[1fr_auto] gap-4">
-        {/* Subtotal Row */}
-        <span>Subtotal:</span>
-        <span className="text-right">{formatCurrency(subtotal, locale, currency)}</span>
+      <div className="space-y-2">
+        <div className="flex justify-between">
+          <span>Subtotal:</span>
+          <span className="text-right">{formatCurrency(subtotal, locale, currency)}</span>
+        </div>
         
-        {/* Extra Charges Rows */}
         {showDetails && validExtraCharges.map(charge => {
           const amount = charge.type === 'percentage' 
             ? subtotal * (parseFloat(charge.value) / 100)
             : parseFloat(charge.value);
           return (
-            <React.Fragment key={charge.id}>
+            <div key={charge.id} className="flex justify-between text-sm text-gray-600">
               <span>{charge.name} ({charge.type === 'percentage' ? `${charge.value}%` : 'fixed'}):</span>
-              <span className="text-right">{formatCurrency(amount, locale, currency)}</span>
-            </React.Fragment>
+              <span>{formatCurrency(amount, locale, currency)}</span>
+            </div>
           );
         })}
         
-        {/* Total Row */}
-        <span className="font-bold">Total:</span>
-        <span className="font-bold text-right">{formatCurrency(total, locale, currency)}</span>
+        <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
+          <span>Total:</span>
+          <span>{formatCurrency(total, locale, currency)}</span>
+        </div>
       </div>
     </div>
   );

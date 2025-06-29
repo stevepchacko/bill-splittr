@@ -94,67 +94,67 @@ export default function SelectShares({
           
           return (
             <div key={item.id} className="border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold text-lg">
-                      {item.name} ({formatCurrency(parseFloat(item.price), locale, currency)}) 
-                      <span className="text-gray-600 font-normal ml-2">× {item.quantity}</span>
-                    </h3>
-                    
-                    <button
-                      onClick={() => updateEqualSplit?.(item.id, !item.equalSplit)}
-                      className={`px-3 py-1 rounded-full text-sm font-medium transition-colors w-40 text-center select-none ${
-                        item.equalSplit
-                        ? 'bg-green-100 text-green-800 border border-green-200 hover:bg-green-200'
-                        : 'bg-yellow-100 text-yellow-800 border border-yellow-200 hover:bg-yellow-200'
-                      }`}
-                    >
-                      {item.equalSplit ? 'Equal Split' : 'Split Separately'}
-                    </button>
-                  </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div className="flex-1 min-w-[200px]">
+                  <h3 className="font-semibold text-lg">
+                    {item.name} ({formatCurrency(parseFloat(item.price), locale, currency)}) 
+                    <span className="text-gray-600 font-normal ml-2">× {item.quantity}</span>
+                  </h3>
+                </div>
+                
+                <button
+                  onClick={() => updateEqualSplit?.(item.id, !item.equalSplit)}
+                  className={`px-3 py-1 rounded-full text-sm font-medium transition-colors w-full sm:w-40 text-center select-none ${
+                    item.equalSplit
+                    ? 'bg-green-100 text-green-800 border border-green-200 hover:bg-green-200'
+                    : 'bg-yellow-100 text-yellow-800 border border-yellow-200 hover:bg-yellow-200'
+                  }`}
+                >
+                  {item.equalSplit ? 'Equal Split' : 'Split Separately'}
+                </button>
+              </div>
                   
-                  <div className="flex justify-between items-center mt-2">
-                    <div className="flex flex-wrap gap-2">
-                      {people.filter(person => {
-                        const personShares = shares[person.id] || [];
-                        const itemShare = personShares.find(s => s.itemId === item.id);
-                        return !itemShare?.share; 
-                      }).map(person => (
-                        <span
-                          key={person.id}
-                          className="px-3 py-1 rounded-full text-sm font-medium bg-gray-200 text-gray-500 transition-colors cursor-pointer hover:bg-gray-300"
-                          onClick={() => handleAddPerson(person.id, item.id, item.equalSplit || false)}
-                        >
-                          {person.name}
-                        </span>
-                      ))}
-                    </div>
-                    
-                    <div className="ml-4">
-                      {sharingPeople.length < people.length && (
-                        <span
-                          className="px-3 py-1 rounded-full text-sm font-medium bg-blue-500 text-white cursor-pointer hover:bg-blue-600 transition-colors"
-                          onClick={() => {
-                            people.forEach(person => {
-                              const personShares = shares[person.id] || [];
-                              const itemShare = personShares.find(s => s.itemId === item.id);
-                              if (!itemShare?.share) {
-                                handleAddPerson(person.id, item.id, item.equalSplit || false);
-                              }
-                            });
-                          }}
-                        >
-                          Add All
-                        </span>
-                      )}
-                    </div>
-                  </div>
+              <div className="flex justify-between items-center mt-2">
+                <div className="flex flex-wrap gap-2 flex-1">
+                  {people.filter(person => {
+                    const personShares = shares[person.id] || [];
+                    const itemShare = personShares.find(s => s.itemId === item.id);
+                    return !itemShare?.share; 
+                  }).map(person => (
+                    <span
+                      key={person.id}
+                      className="px-3 py-1 rounded-full text-sm font-medium bg-gray-200 text-gray-500 transition-colors cursor-pointer hover:bg-gray-300"
+                      onClick={() => handleAddPerson(person.id, item.id, item.equalSplit || false)}
+                    >
+                      {person.name}
+                    </span>
+                  ))}
+                </div>
+                
+                <div className="ml-4 flex-shrink-0">
+                  {sharingPeople.length < people.length && (
+                    <button
+                      className="px-3 py-1 rounded-lg text-sm font-medium bg-blue-200 text-blue-800 cursor-pointer hover:bg-blue-300 transition-colors leading-tight text-center"
+                      onClick={() => {
+                        people.forEach(person => {
+                          const personShares = shares[person.id] || [];
+                          const itemShare = personShares.find(s => s.itemId === item.id);
+                          if (!itemShare?.share) {
+                            handleAddPerson(person.id, item.id, item.equalSplit || false);
+                          }
+                        });
+                      }}
+                    >
+                      Add
+                      <br />
+                      All
+                    </button>
+                  )}
                 </div>
               </div>
               
               {sharingPeople.length > 0 && (
-                <div className="border-t pt-3">
+                <div className="border-t pt-3 mt-3">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm text-gray-600">Sharing this item:</p>
                     {!(item.equalSplit) && (
@@ -163,8 +163,8 @@ export default function SelectShares({
                       </p>
                     )}
                   </div>
-                  <div className="flex justify-between items-start">
-                    <div className="flex flex-wrap gap-2 flex-1">
+                  <div className="flex justify-between items-center">
+                    <div className="flex flex-wrap gap-2 items-center">
                       {sharingPeople.map(person => {
                         const personShares = shares[person.id] || [];
                         const itemShare = personShares.find(s => s.itemId === item.id);
@@ -215,7 +215,7 @@ export default function SelectShares({
                                   className="px-2 py-1 rounded-full text-xs bg-gray-200 text-gray-700 hover:bg-gray-300"
                                   onClick={() => setEditingQuantity(prev => ({ ...prev, [key]: true }))}
                                 >
-                                  Qty: {quantity}
+                                  {quantity}
                                 </button>
                               )
                             )}
@@ -223,13 +223,38 @@ export default function SelectShares({
                         );
                       })}
                     </div>
-                    
-                    {sharingPeople.length > 1 && item.equalSplit && (
-                      <div className="text-sm text-gray-500">
-                        {formatCurrency(parseFloat(item.price) / sharingPeople.length, locale, currency)} each
-                      </div>
-                    )}
+                    <div className="ml-4 flex-shrink-0">
+                      {sharingPeople.length > 1 && (
+                        <button
+                          className="px-3 py-1 rounded-lg text-sm font-medium bg-red-200 text-red-800 cursor-pointer hover:bg-red-300 transition-colors leading-tight text-center"
+                          onClick={() => {
+                            sharingPeople.forEach(person => {
+                              updateShare(person.id, item.id, false);
+                            });
+                          }}
+                        >
+                          Remove
+                          <br />
+                          All
+                        </button>
+                      )}
+                    </div>
                   </div>
+
+                  {sharingPeople.length > 0 && (
+                    <div className="text-sm text-gray-500 mt-2 text-right">
+                      {item.equalSplit ? (
+                        sharingPeople.length > 1 &&
+                        <span>
+                          {formatCurrency(parseFloat(item.price) / sharingPeople.length, locale, currency)} each
+                        </span>
+                      ) : (
+                        <span>
+                          {formatCurrency(parseFloat(item.price), locale, currency)} per item
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -10,23 +10,28 @@ interface BillItemProps {
 
 export default function BillItems({ item, onUpdate, onRemove }: BillItemProps) {
   return (
-    <div className="flex items-center gap-4 mb-3">
+    <div className="flex items-center gap-2 pt-2">
       <div className="flex-grow">
         <Input
           type="text"
           value={item.name}
           onChange={(value) => onUpdate(item.id, 'name', value)}
           label="Item Name"
-          placeholder=""
+          placeholder=" "
         />
       </div>
-      <div className="w-20">
+      <div className="w-16">
         <Input
           type="number"
           value={item.quantity}
           onChange={(value) => onUpdate(item.id, 'quantity', value)}
-          label="Quantity"
-          placeholder="1"
+          label={
+            <>
+              <span className="sm:hidden">Qty</span>
+              <span className="hidden sm:inline">Quantity</span>
+            </>
+          }
+          placeholder=" "
           min="1"
         />
       </div>

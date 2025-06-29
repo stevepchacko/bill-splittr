@@ -108,7 +108,7 @@ export default function BillSplitter() {
 
   // Recalculate extra charges when subtotal changes
   useEffect(() => {
-    setExtraCharges(extraCharges.map(charge => {
+    setExtraCharges(prevCharges => prevCharges.map(charge => {
       if (charge.value !== '') {
         if (charge.type === 'percentage') {
           const amount = subtotal * (parseFloat(charge.value) / 100);
@@ -126,7 +126,7 @@ export default function BillSplitter() {
       }
       return charge;
     }));
-  }, [subtotal, extraCharges]);
+  }, [subtotal]);
 
   const removeExtraCharge = (id: number) => {
     setExtraCharges(extraCharges.filter(charge => charge.id !== id));
@@ -177,6 +177,24 @@ export default function BillSplitter() {
     setBillItems(prev => prev.map(item => 
       item.id === itemId ? { ...item, equalSplit } : item
     ));
+
+    if (people.length === 1) {
+      const personId = people[0].id;
+      const newShares = { ...shares };
+      const itemShareIndex = newShares[personId]?.findIndex(s => s.itemId === itemId);
+      
+      if (itemShareIndex !== -1) {
+        const billItem = billItems.find(i => i.id === itemId);
+        if (billItem) {
+          if (!equalSplit) {
+            newShares[personId][itemShareIndex].quantity = parseInt(billItem.quantity);
+          } else {
+            newShares[personId][itemShareIndex].quantity = 1;
+          }
+          setShares(newShares);
+        }
+      }
+    }
   };
 
   const calculatePersonTotals = () => {
@@ -357,33 +375,53 @@ export default function BillSplitter() {
       )}
       
       {step === 2 && (
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Step 2: Add Extra Charges</h2>
           
           {/* Bill Items Section */}
-          <div>
+          <div className="mb-6">
             <h3 className="text-lg font-semibold mb-3">Bill Items:</h3>
-            <div className="grid grid-cols-[minmax(200px,1fr)_80px_100px_100px] gap-4">
-              {/* Header Row */}
-              <span className="font-medium text-gray-500 text-sm">Item</span>
-              <span className="font-medium text-gray-500 text-sm text-right">Quantity</span>
-              <span className="font-medium text-gray-500 text-sm text-right">Rate</span>
-              <span className="font-medium text-gray-500 text-sm text-right">Price</span>
-              
-              {/* Data Rows */}
-              {billItems.map(item => (
-                <React.Fragment key={item.id}>
-                  <span className="font-medium truncate">{item.name}</span>
-                  <span className="text-right">x{item.quantity}</span>
+            
+            {/* Desktop Header */}
+            <div className="hidden sm:grid grid-cols-4 gap-4 mb-2 font-semibold text-sm text-gray-500">
+              <span className="col-span-1">Item</span>
+              <span className="text-center">Quantity</span>
+              <span className="text-right">Rate</span>
+              <span className="text-right">Price</span>
+            </div>
+
+            {/* Items List */}
+            {billItems.map(item => (
+              <div key={item.id} className="sm:grid sm:grid-cols-4 sm:gap-4 py-2 border-b last:border-b-0">
+                {/* Mobile View */}
+                <div className="sm:hidden">
+                  <div className="flex justify-between items-start">
+                    <span className="font-semibold break-words w-3/4">{item.name}</span>
+                    <span className="text-right whitespace-nowrap">x{item.quantity}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm text-gray-600 mt-1">
+                    <span>
+                      Rate: {formatCurrency(parseFloat(item.price) || 0, currencyInfo.locale, currencyInfo.currency)}
+                    </span>
+                    <span className="font-medium">
+                      Price: {formatCurrency((parseFloat(item.price) || 0) * (parseInt(item.quantity) || 1), currencyInfo.locale, currencyInfo.currency)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Desktop View */}
+                <div className="hidden sm:contents">
+                  <span className="font-medium">{item.name}</span>
+                  <span className="text-center">x{item.quantity}</span>
                   <span className="text-right">{formatCurrency(parseFloat(item.price), currencyInfo.locale, currencyInfo.currency)}</span>
                   <span className="text-right">{formatCurrency(parseFloat(item.price) * parseInt(item.quantity), currencyInfo.locale, currencyInfo.currency)}</span>
-                </React.Fragment>
-              ))}
-            </div>
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Extra Charges Section */}
-          <div className="mt-6 border-t pt-4 mb-6">
+          <div className="mt-6 border-t pt-4">
             <h3 className="text-lg font-semibold mb-3">Extra Charges:</h3>
             <div className="space-y-3 mb-4">
               {extraCharges.map(charge => (
@@ -400,10 +438,10 @@ export default function BillSplitter() {
             <div className="flex justify-center">
               <button 
                 onClick={addExtraCharge}
-                className="add-button"
-                title="Add Extra Charge"
+                className="add-button px-4 flex items-center gap-2"
               >
-                <MdAdd />
+                <MdAdd className="flex-shrink-0" />
+                <span>Add Charge</span>
               </button>
             </div>
           </div>
@@ -475,7 +513,7 @@ export default function BillSplitter() {
       )}
       
       {step === 5 && (
-        <div ref={billRef} className="bg-white rounded-lg shadow p-6 mb-6">
+        <div ref={billRef} className="bg-white p-4 sm:p-6 rounded-lg shadow-lg w-full text-black">
           <div className="mb-4">
             <h2 className="text-xl font-semibold hide-from-image">
               {billName ? 'Results:' : 'Step 5: Results'}
@@ -486,25 +524,45 @@ export default function BillSplitter() {
           </div>
           
           {/* Bill Items Section */}
-          <div>
-            <h3 className="text-lg font-semibold mb-3">Bill Items:</h3>
-            <div className="grid grid-cols-[minmax(200px,1fr)_80px_100px_100px] gap-4">
-              {/* Header Row */}
-              <span className="font-medium text-gray-500 text-sm">Item</span>
-              <span className="font-medium text-gray-500 text-sm text-right">Quantity</span>
-              <span className="font-medium text-gray-500 text-sm text-right">Rate</span>
-              <span className="font-medium text-gray-500 text-sm text-right">Price</span>
-              
-              {/* Data Rows */}
-              {billItems.map(item => (
-                <React.Fragment key={item.id}>
-                  <span className="font-medium truncate">{item.name}</span>
-                  <span className="text-right">x{item.quantity}</span>
+          <div className="mb-6">
+            <h3 className="text-xl font-semibold border-b pb-2 mb-4">Bill Items:</h3>
+            
+            {/* Desktop Header */}
+            <div className="hidden sm:grid grid-cols-4 gap-4 mb-2 font-semibold">
+              <span className="col-span-1">Item</span>
+              <span className="text-center">Quantity</span>
+              <span className="text-right">Rate</span>
+              <span className="text-right">Price</span>
+            </div>
+
+            {/* Items List */}
+            {billItems.map(item => (
+              <div key={item.id} className="sm:grid sm:grid-cols-4 sm:gap-4 py-2 border-b last:border-b-0">
+                {/* Mobile View */}
+                <div className="sm:hidden">
+                  <div className="flex justify-between items-start">
+                    <span className="font-semibold break-words w-3/4">{item.name}</span>
+                    <span className="text-right whitespace-nowrap">x{item.quantity}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm text-gray-600 mt-1">
+                    <span>
+                      Rate: {formatCurrency(parseFloat(item.price) || 0, currencyInfo.locale, currencyInfo.currency)}
+                    </span>
+                    <span className="font-medium">
+                      Price: {formatCurrency((parseFloat(item.price) || 0) * (parseInt(item.quantity) || 1), currencyInfo.locale, currencyInfo.currency)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Desktop View */}
+                <div className="hidden sm:contents">
+                  <span className="break-words">{item.name}</span>
+                  <span className="text-center">x{item.quantity}</span>
                   <span className="text-right">{formatCurrency(parseFloat(item.price), currencyInfo.locale, currencyInfo.currency)}</span>
                   <span className="text-right">{formatCurrency(parseFloat(item.price) * parseInt(item.quantity), currencyInfo.locale, currencyInfo.currency)}</span>
-                </React.Fragment>
-              ))}
-            </div>
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Extra Charges Section */}
@@ -596,63 +654,71 @@ export default function BillSplitter() {
         </div>
       )}
 
-      <div className="flex justify-between items-center mt-4">
-        <div>
-          {step === 5 && (
-            <button 
-              onClick={handleDownloadImage}
-              className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
-            >
-              Download as Image
-            </button>
-          )}
-        </div>
-
-        <div className="flex justify-end gap-4">
-          {step > 1 && (
-            <button 
-              onClick={() => setStep(step - 1)}
-              className="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded"
-            >
-              Back
-            </button>
-          )}
-          {step < 5 && (
-            <div className="relative group">
-              <button 
-                onClick={() => setStep(step + 1)}
-                disabled={step === 4 && !isStep4Valid}
-                className={`text-white py-2 px-4 rounded ${
-                  step === 4 && !isStep4Valid 
-                    ? 'bg-gray-400 cursor-not-allowed' 
-                    : 'bg-green-500 hover:bg-green-600'
-                }`}
+      <div className="mt-4">
+        {step === 5 ? (
+          <div className="space-y-2 sm:space-y-0 sm:flex sm:justify-between sm:items-center">
+            <div className="w-full sm:w-auto">
+              <button
+                onClick={handleDownloadImage}
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
               >
-                Next
+                Download as Image
               </button>
-              {step === 4 && !isStep4Valid && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max p-2 bg-gray-800 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                  {step4Tooltip}
-                </div>
-              )}
             </div>
-          )}
-          {step === 5 && (
-            <button 
-              onClick={() => {
-                setStep(1);
-                setBillName('');
-                setBillItems([{ id: 1, name: '', price: '', quantity: '1', equalSplit: true }]);
-                setExtraCharges([]);
-                setPeople([]);
-                setShares({});
-              }}
-              className="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded"
-            >
-              Start Over
-            </button>
-          )}
-        </div>
+            <div className="flex gap-2 sm:gap-4">
+              <button
+                onClick={() => setStep(step - 1)}
+                className="w-1/2 sm:w-auto bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded"
+              >
+                Back
+              </button>
+              <button
+                onClick={() => {
+                  setStep(1);
+                  setBillName('');
+                  setBillItems([{ id: 1, name: '', price: '', quantity: '1', equalSplit: true }]);
+                  setExtraCharges([]);
+                  setPeople([]);
+                  setShares({});
+                }}
+                className="w-1/2 sm:w-auto bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded"
+              >
+                Start Over
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex justify-end gap-4">
+            {step > 1 && (
+              <button
+                onClick={() => setStep(step - 1)}
+                className="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded"
+              >
+                Back
+              </button>
+            )}
+            {step < 5 && (
+              <div className="relative group">
+                <button 
+                  onClick={() => setStep(step + 1)}
+                  disabled={step === 4 && !isStep4Valid}
+                  className={`py-2 px-4 rounded ${
+                    step === 4 && !isStep4Valid 
+                      ? 'bg-green-200 text-green-500 cursor-not-allowed' 
+                      : 'bg-green-500 text-white hover:bg-green-600'
+                  }`}
+                >
+                  Next
+                </button>
+                {step === 4 && !isStep4Valid && (
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max p-2 bg-gray-800 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                    {step4Tooltip}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,10 +1,10 @@
-import { useId, forwardRef } from 'react';
+import { useId, forwardRef, ReactNode } from 'react';
 
 interface InputProps {
   type?: 'text' | 'number';
   value: string;
   onChange: (value: string) => void;
-  label?: string;
+  label?: ReactNode;
   hideLabel?: boolean;
   placeholder?: string;
   min?: string;
@@ -42,7 +42,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
         <label
           htmlFor={id}
           className={hideLabel ? 'sr-only' : `absolute left-2 -top-2 px-1 text-xs text-gray-500 bg-white transition-all duration-200
-            peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-placeholder-shown:top-2
+            peer-placeholder-shown:text-sm peer-placeholder-shown:text-gray-400 peer-placeholder-shown:top-2
             peer-focus:-top-2 peer-focus:text-xs peer-focus:text-gray-500 select-none cursor-pointer`}
         >
           {label}
