@@ -21,6 +21,9 @@ export default function BillSplitter() {
   const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
   const [dataFromAI, setDataFromAI] = useState(false);
+  const [aiConfidence, setAiConfidence] = useState<number | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStep, setProcessingStep] = useState('');
   const [shares, setShares] = useState<Shares>({});
   const [step, setStep] = useState(0);
   const [currencyInfo, setCurrencyInfo] = useState({ locale: 'en-US', currency: 'USD' });
@@ -261,7 +264,8 @@ export default function BillSplitter() {
 
   const handlePhotoUpload = async (file: File) => {
     try {
-      // Show loading state (you can add a loading spinner later)
+      setIsProcessing(true);
+      setProcessingStep('Processing image with OCR...');
       console.log('Processing image with OCR...');
       
       // Process the image with OCR
@@ -276,6 +280,7 @@ export default function BillSplitter() {
       }
       
       // Parse the OCR results with AI
+      setProcessingStep('Parsing bill data with AI...');
       console.log('Parsing OCR results with AI...');
       console.log('Sending to AI:', JSON.stringify(ocrResults));
       
@@ -284,6 +289,11 @@ export default function BillSplitter() {
       console.log('AI Parsed Bill Data:', parsedBillData);
       
       // Populate the bill data with AI results
+      // Set the bill name if extracted by AI
+      if (parsedBillData.billName) {
+        setBillName(parsedBillData.billName);
+      }
+      
       if (parsedBillData.items && parsedBillData.items.length > 0) {
         const populatedItems = parsedBillData.items.map(item => ({
           id: Date.now() + Math.random(), // Generate unique ID
@@ -308,9 +318,16 @@ export default function BillSplitter() {
       
       // Set flag that data came from AI
       setDataFromAI(true);
+      setAiConfidence(parsedBillData.confidence || null);
       
-      // Show success message
-      alert(`AI parsing completed!\n\nBill Name: ${parsedBillData.billName || 'Not found'}\nItems: ${parsedBillData.items.length}\nExtra Charges: ${parsedBillData.extraCharges.length}\n\nAll items and charges have been populated for your review. You can now edit any amounts, names, or quantities.`);
+      // Show success message with confidence warning if applicable
+      let message = `AI parsing completed!\n\nBill Name: ${parsedBillData.billName || 'Not found'}\nItems: ${parsedBillData.items.length}\nExtra Charges: ${parsedBillData.extraCharges.length}\n\nAll items and charges have been populated for your review. You can now edit any amounts, names, or quantities.`;
+      
+      if (parsedBillData.confidence !== undefined && parsedBillData.confidence < 0.9) {
+        message += `\n\n⚠️ Warning: Low confidence parsing (${(parsedBillData.confidence * 100).toFixed(1)}%). Please double-check all extracted data for accuracy.`;
+      }
+      
+      alert(message);
       
       setStep(1);
     } catch (error) {
@@ -323,6 +340,9 @@ export default function BillSplitter() {
       } else {
         alert(`Processing failed: ${errorMessage}\n\nPlease try again or use manual entry.`);
       }
+    } finally {
+      setIsProcessing(false);
+      setProcessingStep('');
     }
   };
 
@@ -411,10 +431,24 @@ export default function BillSplitter() {
       </div>
       
       {step === 0 && (
-        <BillPhotoUpload
-          onPhotoUpload={handlePhotoUpload}
-          onManualEntry={handleManualEntry}
-        />
+        <>
+          <BillPhotoUpload
+            onPhotoUpload={handlePhotoUpload}
+            onManualEntry={handleManualEntry}
+          />
+          {isProcessing && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 max-w-sm mx-4 text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <h3 className="text-lg font-semibold mb-2">Processing Bill</h3>
+                <p className="text-gray-600 text-sm">{processingStep}</p>
+                <div className="mt-4 text-xs text-gray-500">
+                  This may take a few moments...
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
       
       {step === 1 && (
@@ -429,14 +463,29 @@ export default function BillSplitter() {
             />
           </div>
           {dataFromAI && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-center gap-2 text-blue-800">
+            <div className={`mb-4 p-3 rounded-lg border ${
+              aiConfidence !== null && aiConfidence < 0.9 
+                ? 'bg-yellow-50 border-yellow-200' 
+                : 'bg-blue-50 border-blue-200'
+            }`}>
+              <div className={`flex items-center gap-2 ${
+                aiConfidence !== null && aiConfidence < 0.9 
+                  ? 'text-yellow-800' 
+                  : 'text-blue-800'
+              }`}>
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                 </svg>
-                <span className="text-sm font-medium">
-                  AI-Parsed Data: Review and edit the items below. All fields are editable.
-                </span>
+                <div className="text-sm">
+                  <span className="font-medium">
+                    AI-Parsed Data: Review and edit the items below. All fields are editable.
+                  </span>
+                  {aiConfidence !== null && aiConfidence < 0.9 && (
+                    <div className="mt-1 text-xs">
+                      ⚠️ Low confidence parsing ({(aiConfidence * 100).toFixed(1)}%). Please double-check all data for accuracy.
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -518,14 +567,29 @@ export default function BillSplitter() {
           {/* Extra Charges Section */}
           <div className="mt-6 border-t pt-4">
             {dataFromAI && (
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center gap-2 text-blue-800">
+              <div className={`mb-4 p-3 rounded-lg border ${
+                aiConfidence !== null && aiConfidence < 0.9 
+                  ? 'bg-yellow-50 border-yellow-200' 
+                  : 'bg-blue-50 border-blue-200'
+              }`}>
+                <div className={`flex items-center gap-2 ${
+                  aiConfidence !== null && aiConfidence < 0.9 
+                    ? 'text-yellow-800' 
+                    : 'text-blue-800'
+                }`}>
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                   </svg>
-                  <span className="text-sm font-medium">
-                    AI-Parsed Extra Charges: Review and edit the charges below. All fields are editable.
-                  </span>
+                  <div className="text-sm">
+                    <span className="font-medium">
+                      AI-Parsed Extra Charges: Review and edit the charges below. All fields are editable.
+                    </span>
+                    {aiConfidence !== null && aiConfidence < 0.9 && (
+                      <div className="mt-1 text-xs">
+                        ⚠️ Low confidence parsing ({(aiConfidence * 100).toFixed(1)}%). Please double-check all data for accuracy.
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -788,6 +852,7 @@ export default function BillSplitter() {
                   setPeople([]);
                   setShares({});
                   setDataFromAI(false);
+                  setAiConfidence(null);
                 }}
                 className="w-1/2 sm:w-auto bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded"
               >

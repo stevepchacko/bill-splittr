@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef } from 'react';
 import Image from 'next/image';
-import { MdCameraAlt, MdUpload, MdEdit, MdKeyboardArrowRight } from 'react-icons/md';
+import { MdCameraAlt, MdUpload, MdEdit, MdKeyboardArrowRight, MdClose, MdRefresh } from 'react-icons/md';
 
 interface BillPhotoUploadProps {
   onPhotoUpload: (file: File) => void;
@@ -150,12 +150,22 @@ export default function BillPhotoUpload({ onPhotoUpload, onManualEntry }: BillPh
                     height={192}
                     className="w-full h-48 object-cover rounded-lg border"
                   />
-                  <button
-                    onClick={handleRemoveFile}
-                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg"
-                  >
-                    <MdEdit />
-                  </button>
+                  <div className="absolute top-2 right-2 flex gap-2">
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full shadow-lg"
+                      title="Choose different image"
+                    >
+                      <MdRefresh />
+                    </button>
+                    <button
+                      onClick={handleRemoveFile}
+                      className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg"
+                      title="Remove image"
+                    >
+                      <MdClose />
+                    </button>
+                  </div>
                 </div>
   
                 <div className="text-sm text-gray-600">

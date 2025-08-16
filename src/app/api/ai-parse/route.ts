@@ -243,7 +243,7 @@ ${ocrText}`;
     }
     
     // Check confidence score
-    if (parsedData.confidence !== undefined && parsedData.confidence < 0.9) {
+    if (parsedData.confidence !== undefined && parsedData.confidence < 0.5) {
       console.log('AI Parse API - Confidence too low:', parsedData.confidence);
       throw new Error('OCR data could not be read clearly. Please try taking a clearer photo or enter the bill details manually.');
     }
@@ -267,7 +267,7 @@ ${ocrText}`;
   } catch (error) {
     console.error('AI parsing error:', error);
     return NextResponse.json(
-      { error: 'AI parsing failed' }, 
+      { error: error }, 
       { status: 500 }
     );
   }
