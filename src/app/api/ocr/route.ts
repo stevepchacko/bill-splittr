@@ -42,8 +42,8 @@ export async function POST(request: NextRequest) {
       const parsedResult = data.ParsedResults[0];
       
       if (parsedResult.TextOverlay && parsedResult.TextOverlay.Lines) {
-        parsedResult.TextOverlay.Lines.forEach((line: any) => {
-          line.Words.forEach((word: any) => {
+        parsedResult.TextOverlay.Lines.forEach((line: { Words: { WordText: string }[] }) => {
+          line.Words.forEach((word: { WordText: string }) => {
             results.push(word.WordText);
           });
         });

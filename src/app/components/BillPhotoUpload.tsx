@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef } from 'react';
+import Image from 'next/image';
 import { MdCameraAlt, MdUpload, MdEdit, MdKeyboardArrowRight } from 'react-icons/md';
 
 interface BillPhotoUploadProps {
@@ -142,9 +143,11 @@ export default function BillPhotoUpload({ onPhotoUpload, onManualEntry }: BillPh
             ) : (
               <div className="space-y-4">
                 <div className="relative">
-                  <img
+                  <Image
                     src={previewUrl}
                     alt="Bill preview"
+                    width={400}
+                    height={192}
                     className="w-full h-48 object-cover rounded-lg border"
                   />
                   <button

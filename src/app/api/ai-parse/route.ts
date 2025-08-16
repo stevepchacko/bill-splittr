@@ -168,7 +168,7 @@ ${ocrText}`;
         aiResponse = cloudflareResponse.response;
         console.log('AI Parse API - Extracted AI response from response field:', aiResponse);
       }
-    } catch (parseError) {
+    } catch {
       console.log('AI Parse API - Not a Cloudflare API response, treating as direct AI response');
     }
     
