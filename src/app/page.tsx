@@ -5,8 +5,11 @@ import ExtraCharges from './components/ExtraCharges';
 import BillSummary from './components/BillSummary';
 import CurrencySelector from './components/CurrencySelector';
 import SelectShares from './components/SelectShares';
+import BillPhotoUpload from './components/BillPhotoUpload';
 import { BillItem, ExtraCharge, Person, Shares } from './types';
 import { getBrowserCurrency, formatCurrency } from './utils/currency';
+import { processImageWithOCR } from './utils/ocr';
+import { parseBillWithAI } from './utils/ai-parser';
 import { MdClose, MdAdd } from 'react-icons/md';
 import React from 'react';
 import Input from './components/Input';
@@ -17,8 +20,9 @@ export default function BillSplitter() {
   const [billItems, setBillItems] = useState<BillItem[]>([{ id: 1, name: '', price: '', quantity: '1', equalSplit: true }]);
   const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
+  const [dataFromAI, setDataFromAI] = useState(false);
   const [shares, setShares] = useState<Shares>({});
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0);
   const [currencyInfo, setCurrencyInfo] = useState({ locale: 'en-US', currency: 'USD' });
 
   const billRef = useRef<HTMLDivElement>(null);
@@ -255,6 +259,77 @@ export default function BillSplitter() {
     return personTotals;
   };
 
+  const handlePhotoUpload = async (file: File) => {
+    try {
+      // Show loading state (you can add a loading spinner later)
+      console.log('Processing image with OCR...');
+      
+      // Process the image with OCR
+      const ocrResults = await processImageWithOCR(file);
+      
+      console.log('OCR Results:', ocrResults);
+      console.log('OCR Results type:', typeof ocrResults);
+      console.log('OCR Results length:', ocrResults?.length);
+      
+      if (!ocrResults || ocrResults.length === 0) {
+        throw new Error('OCR returned no results');
+      }
+      
+      // Parse the OCR results with AI
+      console.log('Parsing OCR results with AI...');
+      console.log('Sending to AI:', JSON.stringify(ocrResults));
+      
+      const parsedBillData = await parseBillWithAI(ocrResults);
+      
+      console.log('AI Parsed Bill Data:', parsedBillData);
+      
+      // Populate the bill data with AI results
+      if (parsedBillData.items && parsedBillData.items.length > 0) {
+        const populatedItems = parsedBillData.items.map(item => ({
+          id: Date.now() + Math.random(), // Generate unique ID
+          name: item.name || '',
+          price: (parseFloat(item.price) || 0).toString(),
+          quantity: (parseInt(item.quantity) || 1).toString(),
+          equalSplit: true
+        }));
+        setBillItems(populatedItems);
+      }
+      
+      if (parsedBillData.extraCharges && parsedBillData.extraCharges.length > 0) {
+        const populatedCharges = parsedBillData.extraCharges.map(charge => ({
+          id: Date.now() + Math.random(), // Generate unique ID
+          name: charge.name || '',
+          value: (parseFloat(charge.value) || 0).toString(),
+          type: charge.type || 'amount',
+          calculatedValue: charge.type === 'percentage' ? '0' : (parseFloat(charge.value) || 0).toString()
+        }));
+        setExtraCharges(populatedCharges);
+      }
+      
+      // Set flag that data came from AI
+      setDataFromAI(true);
+      
+      // Show success message
+      alert(`AI parsing completed!\n\nBill Name: ${parsedBillData.billName || 'Not found'}\nItems: ${parsedBillData.items.length}\nExtra Charges: ${parsedBillData.extraCharges.length}\n\nAll items and charges have been populated for your review. You can now edit any amounts, names, or quantities.`);
+      
+      setStep(1);
+    } catch (error) {
+      console.error('Processing failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      if (errorMessage.includes('OCR data could not be read clearly')) {
+        alert('The receipt image could not be read clearly. Please try taking a clearer photo or use manual entry instead.');
+        setStep(1); // Still proceed to step 1 with empty data
+      } else {
+        alert(`Processing failed: ${errorMessage}\n\nPlease try again or use manual entry.`);
+      }
+    }
+  };
+
+  const handleManualEntry = () => {
+    setStep(1);
+  };
+
   const handleDownloadImage = async () => {
     const element = billRef.current;
     if (!element) return;
@@ -335,6 +410,13 @@ export default function BillSplitter() {
         </div>
       </div>
       
+      {step === 0 && (
+        <BillPhotoUpload
+          onPhotoUpload={handlePhotoUpload}
+          onManualEntry={handleManualEntry}
+        />
+      )}
+      
       {step === 1 && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">Step 1: Add Bill Items</h2>
@@ -346,6 +428,19 @@ export default function BillSplitter() {
               placeholder=" "
             />
           </div>
+          {dataFromAI && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2 text-blue-800">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-medium">
+                  AI-Parsed Data: Review and edit the items below. All fields are editable.
+                </span>
+              </div>
+            </div>
+          )}
+          
           <div className="space-y-3">
             {billItems.map(item => (
               <BillItems
@@ -422,6 +517,18 @@ export default function BillSplitter() {
 
           {/* Extra Charges Section */}
           <div className="mt-6 border-t pt-4">
+            {dataFromAI && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-2 text-blue-800">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-sm font-medium">
+                    AI-Parsed Extra Charges: Review and edit the charges below. All fields are editable.
+                  </span>
+                </div>
+              </div>
+            )}
             <h3 className="text-lg font-semibold mb-3">Extra Charges:</h3>
             <div className="space-y-3 mb-4">
               {extraCharges.map(charge => (
@@ -674,12 +781,13 @@ export default function BillSplitter() {
               </button>
               <button
                 onClick={() => {
-                  setStep(1);
+                  setStep(0);
                   setBillName('');
                   setBillItems([{ id: 1, name: '', price: '', quantity: '1', equalSplit: true }]);
                   setExtraCharges([]);
                   setPeople([]);
                   setShares({});
+                  setDataFromAI(false);
                 }}
                 className="w-1/2 sm:w-auto bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded"
               >
@@ -688,16 +796,16 @@ export default function BillSplitter() {
             </div>
           </div>
         ) : (
-          <div className="flex justify-end gap-4">
-            {step > 1 && (
+          <div className="flex justify-between gap-4">
+            {step > 0 && (
               <button
-                onClick={() => setStep(step - 1)}
+                onClick={() => setStep(step === 1 ? 0 : step - 1)}
                 className="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded"
               >
                 Back
               </button>
             )}
-            {step < 5 && (
+            {step > 0 && step < 5 && (
               <div className="relative group">
                 <button 
                   onClick={() => setStep(step + 1)}
